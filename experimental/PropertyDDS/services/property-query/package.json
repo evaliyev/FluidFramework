@@ -22,7 +22,7 @@
     "mocha:db": "mocha --opts test/db/mocha.opts",
     "mocha:endtoend": "mocha --opts test/endtoend/mocha.opts",
     "test": "npm run test:mocha",
-    "test:mocha": "mocha --exit -r node_modules/@fluidframework/mocha-test-setup --unhandled-rejections=strict",
+    "test:mocha": "mocha --exit -r @fluidframework/mocha-test-setup --unhandled-rejections=strict",
     "test:mocha:verbose": "cross-env FLUID_TEST_VERBOSE=1 npm run test:mocha"
   },
   "nyc": {
@@ -38,7 +38,7 @@
     "@fluid-experimental/property-changeset": "0.1.0",
     "@fluid-experimental/property-common": "0.1.0",
     "@fluid-experimental/property-properties": "0.1.0",
-    "async": "3.1.0",
+    "async": "^3.2.0",
     "basicauth-middleware": "2.0.0",
     "body-parser": "^1.18.3",
     "bson-ext": "2.0.5",
@@ -55,7 +55,7 @@
     "ioredis": "4.5.1",
     "joi": "14.3.1",
     "jsonlint": "^1.6.3",
-    "lodash": "^4.17.19",
+    "lodash": "^4.17.21",
     "lru-cache": "5.1.1",
     "nconf": "^0.11.0",
     "qs": "6.7.0",
@@ -67,7 +67,7 @@
   "devDependencies": {
     "@fluidframework/mocha-test-setup": "^0.35.0",
     "aws-sdk": "2.547.0",
-    "chai": "^4.3.0",
+    "chai": "^4.2.0",
     "chai-as-promised": "7.1.1",
     "cross-env": "^7.0.2",
     "cypress-multi-reporters": "1.1.23",
