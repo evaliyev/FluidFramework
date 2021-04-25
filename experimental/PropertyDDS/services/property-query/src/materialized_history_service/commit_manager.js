@@ -10,7 +10,7 @@
 const _ = require('lodash');
 const AsyncContext = require('../server/utils/async_context');
 const ModuleLogger = require('../server/utils/module_logger');
-const logger = ModuleLogger.getLogger('HFDM.MaterializedHistoryService.CommitManager');
+const logger = ModuleLogger.getLogger('MaterializedHistoryService.CommitManager');
 const { mergeChunkedChangeSet } = require('./change_set_processing/merge_chunked_changeset');
 const { chunkChangeSet, convertPathToChunkBoundaryFormat, getPathFromChunkBoundaryFormat } =
       require('./change_set_processing/chunk_change_set');

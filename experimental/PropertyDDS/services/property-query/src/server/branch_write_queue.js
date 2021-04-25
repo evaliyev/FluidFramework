@@ -2,12 +2,12 @@
  * Copyright (c) Autodesk, Inc. All rights reserved.
  * Licensed under the MIT License.
  */
-const {queue: asyncQueue, retry: asyncRetry } = require('async');
+const { queue: asyncQueue, retry: asyncRetry } = require('async');
 const DeferredPromise = require('@fluid-experimental/property-common').DeferredPromise;
 const HTTPStatus = require('http-status');
 const ModuleLogger = require('./utils/module_logger');
 const OperationError = require('@fluid-experimental/property-common').OperationError;
-const logger = ModuleLogger.getLogger('HFDM.MaterializedHistoryService.BranchWriteQueue');
+const logger = ModuleLogger.getLogger('MaterializedHistoryService.BranchWriteQueue');
 const { ChangeSet } = require('@fluid-experimental/property-changeset');
 
 const _ = require('lodash');
@@ -46,8 +46,8 @@ class BranchWriteQueue {
    */
   isProcessing(branchGuid) {
     return branchGuid in this._pendingCommitPromises ||
-           branchGuid in this._pendingBranchPromises ||
-           branchGuid in this._writeQueue;
+      branchGuid in this._pendingBranchPromises ||
+      branchGuid in this._writeQueue;
   }
 
   /**
@@ -113,7 +113,7 @@ class BranchWriteQueue {
   async waitUntilCommitApplied(branchGuid, commitGuid) {
     if (this._lockedBranches.has(branchGuid)) {
       throw new OperationError(`Branch ${branchGuid} locked for deletion`, 'lockQueuesForDeletion',
-      HTTPStatus.BAD_REQUEST, OperationError.FLAGS.QUIET);
+        HTTPStatus.BAD_REQUEST, OperationError.FLAGS.QUIET);
     }
 
     if (this._pendingCommitPromises[branchGuid] && this._pendingCommitPromises[branchGuid][commitGuid]) {
@@ -123,11 +123,11 @@ class BranchWriteQueue {
       try {
         // Let's see if it was already inserted
         await this._commitManager.getCommit(commitGuid);
-        return Promise.resolve({status: 'existing'});
+        return Promise.resolve({ status: 'existing' });
       } catch (ex) {
         // Not inserted
         if (ex.statusCode === HTTPStatus.NOT_FOUND) {
-          let lastKnownCommitGuid = await this._getLastCommitGuid(branchGuid, commitGuid);
+          let lastKnownCommitGuid = await this._getLastCommitGuid(branchGuid);
 
           logger.trace(
             `Waiting for  ${commitGuid}, but last known commit was ` +
@@ -168,7 +168,7 @@ class BranchWriteQueue {
   async waitUntilBranchCreated(branchGuid) {
     if (this._lockedBranches.has(branchGuid)) {
       throw new OperationError(`Branch ${branchGuid} locked for deletion`, 'lockQueuesForDeletion',
-      HTTPStatus.BAD_REQUEST, OperationError.FLAGS.QUIET);
+        HTTPStatus.BAD_REQUEST, OperationError.FLAGS.QUIET);
     }
 
     if (this._pendingBranchPromises[branchGuid]) {
@@ -178,7 +178,7 @@ class BranchWriteQueue {
       try {
         // Let's see if it was already inserted
         await this._branchManager.getBranch(branchGuid);
-        return Promise.resolve({status: 'existing'});
+        return Promise.resolve({ status: 'existing' });
       } catch (ex) {
         // Not inserted
         if (ex.statusCode === HTTPStatus.NOT_FOUND) {
@@ -190,7 +190,7 @@ class BranchWriteQueue {
             let branchInfo = await this._pssClient.getBranch(branchGuid);
 
             if (!branchInfo.branch.meta || !branchInfo.branch.meta.materializedHistory ||
-                !branchInfo.branch.meta.materializedHistory.enabled) {
+              !branchInfo.branch.meta.materializedHistory.enabled) {
               return Promise.reject(
                 new OperationError(
                   'Waiting for a branch not opted-in for MHS', 'waitUntilBranchCreated',
@@ -199,7 +199,7 @@ class BranchWriteQueue {
             }
 
             let rootCommitGuid = branchInfo.branch.parent && branchInfo.branch.parent.commit &&
-                 branchInfo.branch.parent.commit.guid || branchInfo.repository.rootCommit.guid;
+              branchInfo.branch.parent.commit.guid || branchInfo.repository.rootCommit.guid;
 
             return this.queueBranchGracefully({
               guid: branchGuid,
@@ -257,7 +257,7 @@ class BranchWriteQueue {
    * @param {Object} params.task - The commit request
    * @param {Promise} params.taskDp - A deferred promise to resolve when the write is completed
    */
-  async _validateTopologyWorker({task, taskDp}) {
+  async _validateTopologyWorker({ task, taskDp }) {
     const _tryToFetchMissingAndQueue = async (lastKnownCommit) => {
 
       let found = true;
@@ -269,7 +269,7 @@ class BranchWriteQueue {
       do {
         // Let's try to find if the hole isn't in the queue already
         let taskAndDp =
-          topologyWorkerQueue.find(({task: queueItem}) => queueItem.guid === itemSearchingParent);
+          topologyWorkerQueue.find(({ task: queueItem }) => queueItem.guid === itemSearchingParent);
 
         if (taskAndDp) {
           let { task: expectedParent, taskDp: expectedDp } = taskAndDp;
@@ -371,22 +371,22 @@ class BranchWriteQueue {
       await this._commitManager.getCommit(task.guid);
       logger.trace(`Uniqueness of ${task.guid} failed.  Resolving with existing`);
       // Commit already existing.  Resolve early
-      taskDp.resolve({status: 'existing'});
+      taskDp.resolve({ status: 'existing' });
     } catch (ex) {
       // Commit not already existing  This is where the fun begins
       if (ex.statusCode === HTTPStatus.NOT_FOUND) {
-        let lastCommitGuid = await this._getLastCommitGuid(task.branchGuid, task.guid);
+        let lastCommitGuid = await this._getLastCommitGuid(task.branchGuid);
 
         if (lastCommitGuid !== task.parentGuid && lastCommitGuid !== task.guid) {
           // Not on tip!
           if (task.rebase) {
             // If rebase mode is active, we have to check, whether the parent commit exists
             try {
-              let parentCommit = await this._commitManager.getCommit(task.parentGuid);
+              await this._commitManager.getCommit(task.parentGuid);
               logger.info('Found parent commit, rebasing');
 
               // Fetch all missing commits to perform the rebase
-              // Warning: this loop is potentially very inefficent
+              // Warning: this loop is potentially very inefficient
               let currentCommitGUID = lastCommitGuid;
               let commits = [];
               while (currentCommitGUID !== task.parentGuid) {
@@ -400,11 +400,11 @@ class BranchWriteQueue {
               }
 
               if (_.isString(task.changeSet)) {
-                 task.changeSet =  JSON.parse(task.changeSet);
+                task.changeSet = JSON.parse(task.changeSet);
               }
               for (let commit of commits) {
-                  let conflicts = [];
-                  new ChangeSet(commit.changeSet)._rebaseChangeSet(task.changeSet, conflicts);
+                let conflicts = [];
+                new ChangeSet(commit.changeSet)._rebaseChangeSet(task.changeSet, conflicts);
               }
 
               // Update the parent after rebasing the commit
@@ -413,13 +413,13 @@ class BranchWriteQueue {
               // Enqueue the updated task
               logger.trace(`Queuing for write ${lastCommitGuid}`);
               this._queueCommit(task)
-              .then((res) => {
-                logger.trace(`Done writing ${lastCommitGuid}`);
-                taskDp.resolve(res);
-              }, (ex2) => {
-                logger.trace(`Failed writing ${lastCommitGuid}`);
-                taskDp.reject(ex2);
-              });
+                .then((res) => {
+                  logger.trace(`Done writing ${lastCommitGuid}`);
+                  taskDp.resolve(res);
+                }, (ex2) => {
+                  logger.trace(`Failed writing ${lastCommitGuid}`);
+                  taskDp.reject(ex2);
+                });
             } catch (e) {
               throw new Error('Failed to fetch parent commit: ' + e.message);
             }
@@ -434,7 +434,7 @@ class BranchWriteQueue {
           }
         } else {
           if (lastCommitGuid === task.guid) {
-            taskDp.resolve({status: 'existing'});
+            taskDp.resolve({ status: 'existing' });
           } else {
             logger.trace(`Queuing for write ${lastCommitGuid}`);
             // On tip! Just queue
@@ -457,24 +457,21 @@ class BranchWriteQueue {
   /**
    * Returns the last ingested commit guid for a branch
    * @param {String} branchGuid - Branch guid
-   * @param {String} commitGuid - Commit guid
    * @return {String} - Last ingested commit guid
    */
-  async _getLastCommitGuid(branchGuid, commitGuid) {
+  async _getLastCommitGuid(branchGuid) {
     let lastCommitGuid;
-    // Not already inserting, but something is happenning for this branch
+    // Not already inserting, but something is happening for this branch
     if (this._writeQueue[branchGuid] &&
-        this._writeQueue[branchGuid].length() > 0) {
+      this._writeQueue[branchGuid].length() > 0) {
       // Are we pushing a commit subsequent to the end of the queue
-      logger.trace(`Checking ${commitGuid} against last item of the queue`);
       lastCommitGuid = _.last([...this._writeQueue[branchGuid]]).guid;
     } else {
-      // Nothing happenning for that branch
+      // Nothing happening for that branch
       // Let's check if we are on tip
       if (this._currentlyWritingCommit[branchGuid]) {
         lastCommitGuid = this._currentlyWritingCommit[branchGuid].guid;
       } else {
-        logger.trace(`Checking ${commitGuid} against persisted branch head`);
         try {
           let theBranch = await this._branchManager.getBranch(branchGuid);
           lastCommitGuid = theBranch.headCommitGuid;
@@ -524,7 +521,7 @@ class BranchWriteQueue {
       }
 
       let dp = new DeferredPromise();
-      this._validateTopologyQueue[commitReq.branchGuid].push({task: commitReq, taskDp: dp}, (err, result) => {
+      this._validateTopologyQueue[commitReq.branchGuid].push({ task: commitReq, taskDp: dp }, (err, result) => {
         if (err) {
           dp.reject(err);
         }
@@ -544,7 +541,7 @@ class BranchWriteQueue {
   async queueBranchGracefully(branchReq) {
     if (this._lockedBranches.has(branchReq.guid)) {
       throw new OperationError(`Branch ${branchReq.guid} locked for deletion`, 'lockQueuesForDeletion',
-      HTTPStatus.BAD_REQUEST, OperationError.FLAGS.QUIET);
+        HTTPStatus.BAD_REQUEST, OperationError.FLAGS.QUIET);
     }
 
     // Commit already pending, return the existing promise
@@ -559,7 +556,7 @@ class BranchWriteQueue {
       }
       if (this._lockedBranches.has(branchReq.guid)) {
         throw new OperationError(`Branch ${branchReq.guid} locked for deletion`, 'lockQueuesForDeletion',
-        HTTPStatus.BAD_REQUEST, OperationError.FLAGS.QUIET);
+          HTTPStatus.BAD_REQUEST, OperationError.FLAGS.QUIET);
       }
       return await this._branchManager.createBranch(branchReq);
     };
