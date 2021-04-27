@@ -9,6 +9,7 @@ const ModuleLogger = require('./utils/module_logger');
 const OperationError = require('@fluid-experimental/property-common').OperationError;
 const logger = ModuleLogger.getLogger('MaterializedHistoryService.BranchWriteQueue');
 const { ChangeSet } = require('@fluid-experimental/property-changeset');
+const LRU = require('lru-cache');
 
 const _ = require('lodash');
 
@@ -37,6 +38,9 @@ class BranchWriteQueue {
     this._currentlyWritingCommit = {};
     this._errorsPerBranch = {};
     this._lockedBranches = new Set();
+    this._cache = new LRU({
+      length: (n) => n.length,
+    })
   }
 
   /**
@@ -385,29 +389,13 @@ class BranchWriteQueue {
               await this._commitManager.getCommit(task.parentGuid);
               logger.info('Found parent commit, rebasing');
 
-              // Fetch all missing commits to perform the rebase
-              // Warning: this loop is potentially very inefficient
-              let currentCommitGUID = lastCommitGuid;
-              let commits = [];
-              while (currentCommitGUID !== task.parentGuid) {
-                let commit = await this._commitManager.getCommit(currentCommitGUID);
-                commits.unshift(commit.commit);
-                let changeSet = await this._commitManager.getCommitCS({
-                  guid: currentCommitGUID
-                });
-                commits[0].changeSet = changeSet.changeSet;
-                currentCommitGUID = commit.commit.parentGuid;
-              }
 
-              if (_.isString(task.changeSet)) {
-                task.changeSet = JSON.parse(task.changeSet);
-              }
-              for (let commit of commits) {
-                let conflicts = [];
-                new ChangeSet(commit.changeSet)._rebaseChangeSet(task.changeSet, conflicts);
-              }
+              this.rebaseToRemoteChanges({
+                referenceGuid: task.parentGuid,
+                remoteHeadGuid: lastCommitGuid
+              })
 
-              // Update the parent after rebasing the commit
+
               task.parentGuid = lastCommitGuid;
 
               // Enqueue the updated task
@@ -451,6 +439,173 @@ class BranchWriteQueue {
       } else {
         throw ex;
       }
+    }
+  }
+
+  getUnrebasedChanges(guid) {
+    return this._cache.get(guid);
+  }
+
+  getRebasedChanges(startGuid, endGuid) {
+    const remoteChanges = [];
+    let currentCommitGUID = endGuid;
+
+    while (currentCommitGUID != startGuid) {
+      let commit = await this._commitManager.getCommit(currentCommitGUID);
+      let changeSet = await this._commitManager.getCommitCS({ guid: currentCommitGUID });
+
+      remoteChanges.push({
+        guid: currentCommitGUID,
+        changeSet: changeSet.changeSet
+      })
+      currentCommitGUID = commit.commit.parentGuid;
+    }
+    return remoteChanges;
+}
+
+  rebaseToRemoteChanges(change) {
+    this._cache.set(change.guid, _.cloneDeep(change));
+
+    // This is the first message in the history of the document.
+    if (this.remoteChanges.length === 0) {
+      return;
+    }
+
+    const commitsOnOtherLocalBranch = {};
+    let rebaseBaseChangeSet = new ChangeSet({});
+    const changesOnOtherLocalBranch = [];
+    if (change.referenceGuid !== change.remoteHeadGuid) {
+
+      // Extract all changes between the remoteHeadGuid and the referenceGuid
+      let currentGuid = change.referenceGuid;
+      for (; ;) {
+        const currentChange = this.getUnrebasedChange(currentGuid);
+        if (currentChange === undefined) {
+          throw new Error("Received change that references a non-existing parent change");
+        }
+        changesOnOtherLocalBranch.unshift(currentChange);
+        commitsOnOtherLocalBranch[currentGuid] = currentChange;
+        if (currentGuid === change.localBranchStart) {
+          break;
+        }
+        currentGuid = currentChange.referenceGuid;
+      }
+
+      // Now we extract all changes until we arrive at a change that is relative to a remote change
+      const alreadyRebasedChanges = [];
+      let currentRebasedChange = this.unrebasedRemoteChanges[change.localBranchStart];
+      while (currentRebasedChange.remoteHeadGuid !== currentRebasedChange.referenceGuid) {
+        currentGuid = currentRebasedChange.referenceGuid;
+        currentRebasedChange = this.getUnrebasedChange(currentGuid);
+        alreadyRebasedChanges.unshift(currentRebasedChange);
+        if (currentRebasedChange === undefined) {
+          throw new Error("Received change that references a non-existing parent change");
+        }
+      }
+
+      // Compute the base Changeset to rebase the changes on the branch that was still the local branch
+      // when the incoming change was created
+
+      // First invert all changes on the previous local branch
+      let startGuid;
+      if (alreadyRebasedChanges.length > 0) {
+        startGuid = alreadyRebasedChanges[0].referenceGuid;
+      } else {
+        startGuid = changesOnOtherLocalBranch[0].referenceGuid;
+      }
+
+      // Then apply all changes on the local remote branch
+      const endGuid = change.remoteHeadGuid;
+
+      const relevantRemoteChanges = this.getRebasedChanges(startGuid, endGuid);
+      let rebaseBaseChangeSetForAlreadyRebasedChanges = new ChangeSet({});
+
+      for (const c of relevantRemoteChanges) {
+        let changeset = c.changeSet;
+        let applyAfterMetaInformation;
+
+        if (alreadyRebasedChanges[0]?.guid === c.guid) {
+          const invertedChange = new ChangeSet(_.cloneDeep(alreadyRebasedChanges[0].changeSet));
+          invertedChange._toInverseChangeSet();
+          invertedChange.applyChangeSet(rebaseBaseChangeSetForAlreadyRebasedChanges);
+          applyAfterMetaInformation = new Map();
+          const conflicts2 = [];
+          changeset = _.cloneDeep(alreadyRebasedChanges[0].changeSet);
+          rebaseBaseChangeSetForAlreadyRebasedChanges._rebaseChangeSet(changeset, conflicts2, {
+            applyAfterMetaInformation,
+          });
+
+          rebaseBaseChangeSetForAlreadyRebasedChanges = invertedChange;
+          alreadyRebasedChanges.shift();
+        }
+        rebaseBaseChangeSetForAlreadyRebasedChanges.applyChangeSet(changeset, { applyAfterMetaInformation });
+      }
+
+      // Now we have to rebase all changes from the remote local branch with respect to this base changeset
+      this.rebaseChangeArrays(rebaseBaseChangeSetForAlreadyRebasedChanges, changesOnOtherLocalBranch);
+
+      // Update the reference for the rebased changes to indicate that they are now with respect to the
+      // new remoteHeadGuid
+      if (changesOnOtherLocalBranch.length > 0) {
+        changesOnOtherLocalBranch[0].remoteHeadGuid = change.remoteHeadGuid;
+        changesOnOtherLocalBranch[0].referenceGuid = change.remoteHeadGuid;
+      }
+    }
+
+    const remoteChanges = this.getRebasedChanges(change.remoteHeadGuid, lastCommitGuid);
+
+    const conflicts = [];
+    for (const remoteChange of remoteChanges) {
+      let applyAfterMetaInformation =
+        commitsOnOtherLocalBranch[remoteChange.guid] !== undefined
+          ? remoteChange.rebaseMetaInformation
+          : undefined;
+
+      let changeset = remoteChange.changeSet;
+      if (changesOnOtherLocalBranch[0]?.guid === remoteChange.guid) {
+        const invertedChange = new ChangeSet(_.cloneDeep(changesOnOtherLocalBranch[0].changeSet));
+        invertedChange._toInverseChangeSet();
+        invertedChange.applyChangeSet(rebaseBaseChangeSet);
+
+        applyAfterMetaInformation = new Map();
+        changeset = _.cloneDeep(changesOnOtherLocalBranch[0].changeSet);
+        rebaseBaseChangeSet._rebaseChangeSet(changeset, conflicts, { applyAfterMetaInformation });
+
+        // This is disabled for performance reasons. Only used during debugging
+        // assert(_.isEqual(changeset,this.remoteChanges[i].changeSet),
+        //                 "Failed Rebase in rebaseToRemoteChanges");
+        rebaseBaseChangeSet = invertedChange;
+        changesOnOtherLocalBranch.shift();
+      }
+
+      rebaseBaseChangeSet.applyChangeSet(changeset, {
+        applyAfterMetaInformation,
+      });
+    }
+
+    change.rebaseMetaInformation = new Map();
+    rebaseBaseChangeSet._rebaseChangeSet(change.changeSet, conflicts, {
+      applyAfterMetaInformation: change.rebaseMetaInformation,
+    });
+  }
+
+  rebaseChangeArrays(baseChangeSet, changesToRebase) {
+    let rebaseBaseChangeSet = baseChangeSet;
+    for (const change of changesToRebase) {
+      const copiedChangeSet = new ChangeSet(_.cloneDeep(change.changeSet));
+      copiedChangeSet._toInverseChangeSet();
+
+      const conflicts = [];
+      change.rebaseMetaInformation = new Map();
+      rebaseBaseChangeSet._rebaseChangeSet(change.changeSet, conflicts, {
+        applyAfterMetaInformation: change.rebaseMetaInformation,
+      });
+
+      copiedChangeSet.applyChangeSet(rebaseBaseChangeSet);
+      copiedChangeSet.applyChangeSet(change.changeSet, {
+        applyAfterMetaInformation: change.rebaseMetaInformation,
+      });
+      rebaseBaseChangeSet = copiedChangeSet;
     }
   }
 
