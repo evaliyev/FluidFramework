@@ -12,6 +12,7 @@ import {
     createDeliCheckpointManagerFromCollection,
     DeliLambda,
     ForemanLambda,
+    MuseLambda,
     ScribeLambda,
     ScriptoriumLambda,
     SummaryReader,
@@ -110,6 +111,7 @@ export class LocalOrderer implements IOrderer {
         foremanContext: IContext = new LocalContext(logger),
         scribeContext: IContext = new LocalContext(logger),
         deliContext: IContext = new LocalContext(logger),
+        museContext: IContext = new LocalContext(logger),
         serviceConfiguration: Partial<IServiceConfiguration> = {},
     ) {
         const documentDetails = await setup.documentP();
@@ -130,6 +132,7 @@ export class LocalOrderer implements IOrderer {
             foremanContext,
             scribeContext,
             deliContext,
+            museContext,
             merge({}, DefaultServiceConfiguration, serviceConfiguration));
     }
 
@@ -138,6 +141,7 @@ export class LocalOrderer implements IOrderer {
 
     public scriptoriumLambda: LocalLambdaController | undefined;
     public foremanLambda: LocalLambdaController | undefined;
+    public museLambda: LocalLambdaController | undefined;
     public scribeLambda: LocalLambdaController | undefined;
     public deliLambda: LocalLambdaController | undefined;
     public broadcasterLambda: LocalLambdaController | undefined;
@@ -162,6 +166,7 @@ export class LocalOrderer implements IOrderer {
         private readonly foremanContext: IContext,
         private readonly scribeContext: IContext,
         private readonly deliContext: IContext,
+        private readonly museContext: IContext,
         private readonly serviceConfiguration: IServiceConfiguration,
     ) {
         this.existing = details.existing;
@@ -282,6 +287,13 @@ export class LocalOrderer implements IOrderer {
                     this.rawDeltasKafka,
                     this.serviceConfiguration);
             });
+
+
+        this.museLambda = new LocalLambdaController(
+            this.deltasKafka,
+            this.setup,
+            this.museContext,
+            async (_, context) => new MuseLambda(context));
     }
 
     private async startScribeLambda(setup: ILocalOrdererSetup, context: IContext) {
