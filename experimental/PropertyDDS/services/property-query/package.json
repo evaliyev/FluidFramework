@@ -35,9 +35,9 @@
     "tempDirectory": "coverage/tmp"
   },
   "dependencies": {
-    "@fluid-experimental/property-changeset": "0.1.0",
-    "@fluid-experimental/property-common": "0.1.0",
-    "@fluid-experimental/property-properties": "0.1.0",
+    "@fluid-experimental/property-changeset": "^0.40.0",
+    "@fluid-experimental/property-common": "^0.40.0",
+    "@fluid-experimental/property-properties": "^0.40.0",
     "async": "^3.2.0",
     "basicauth-middleware": "2.0.0",
     "body-parser": "^1.18.3",

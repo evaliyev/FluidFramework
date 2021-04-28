@@ -9,5 +9,6 @@ export * from "./copier";
 export * from "./deli";
 export * from "./foreman";
 export * from "./scribe";
+export * from "./muse";
 export * from "./scriptorium";
 export * from "./utils";
