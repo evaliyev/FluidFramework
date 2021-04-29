@@ -6,7 +6,7 @@ const yargs = require('yargs');
 const fs = require('fs');
 const path = require('path');
 const { expect } = require('chai');
-const { ChangeSet } = require('@hfdm/sdk');
+const { ChangeSet } = require('@fluid-experimental/property-changeset');
 const Fixtures = require('../../test/db/fixtures');
 
 global.targets = {
