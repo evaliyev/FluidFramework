@@ -17,7 +17,7 @@ import Axios from "axios";
 
 export class MuseLambda implements IPartitionLambda {
     private pending = new Map<string, ISequencedOperationMessage[]>();
-    private pendingOffset: IQueuedMessage| undefined;
+    private pendingOffset: IQueuedMessage | undefined;
     private current = new Map<string, ISequencedOperationMessage[]>();
 
     constructor(
@@ -118,7 +118,7 @@ export class MuseLambda implements IPartitionLambda {
                         `MH Commit: branch: ${branchGuid},
                             commit ${commitGuid},
                             changeSet:  ${JSON.stringify(opData.changeSet, undefined, 2)}`,
-                            );
+                    );
 
                     let parentCommitGuid = opData.referenceGuid;
                     // Create a branch for the first commit that does not yet reference any other commit
@@ -146,6 +146,8 @@ export class MuseLambda implements IPartitionLambda {
                             parentGuid: parentCommitGuid,
                             changeSet: JSON.stringify(opData.changeSet),
                             meta: {
+                                remoteHeadGuid: opData.remoteHeadGuid,
+                                localBranchStart: opData.localBranchStart,
                                 sequenceNumber: message.operation.sequenceNumber,
                                 minimumSequenceNumber: message.operation.minimumSequenceNumber,
                             },

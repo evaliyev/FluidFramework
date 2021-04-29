@@ -378,6 +378,11 @@ export class LocalOrderer implements IOrderer {
             // eslint-disable-next-line @typescript-eslint/no-floating-promises
             this.broadcasterLambda.start();
         }
+
+        if (this.museLambda) {
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
+            this.museLambda.start();
+        }
     }
 
     private async closeKafkas() {
@@ -396,6 +401,11 @@ export class LocalOrderer implements IOrderer {
         if (this.scriptoriumLambda) {
             this.scriptoriumLambda.close();
             this.scriptoriumLambda = undefined;
+        }
+
+        if (this.museLambda) {
+            this.museLambda.close();
+            this.museLambda = undefined;
         }
 
         if (this.foremanLambda) {
