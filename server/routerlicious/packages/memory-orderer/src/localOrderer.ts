@@ -288,7 +288,6 @@ export class LocalOrderer implements IOrderer {
                     this.serviceConfiguration);
             });
 
-
         this.museLambda = new LocalLambdaController(
             this.deltasKafka,
             this.setup,
