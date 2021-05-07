@@ -8,7 +8,7 @@ const HTTPStatus = require('http-status');
 const ModuleLogger = require('./utils/module_logger');
 const OperationError = require('@fluid-experimental/property-common').OperationError;
 const logger = ModuleLogger.getLogger('MaterializedHistoryService.BranchWriteQueue');
-const { rebaseToRemoteChanges } = require('@fluid-experimental/property-changeset');
+const { ChangeSet, rebaseToRemoteChanges } = require('@fluid-experimental/property-changeset');
 const LRU = require('lru-cache');
 
 const _ = require('lodash');
@@ -377,6 +377,17 @@ class BranchWriteQueue {
       // Commit already existing.  Resolve early
       taskDp.resolve({ status: 'existing' });
     } catch (ex) {
+
+      const change = {
+        guid: task.guid,
+        changeSet: new ChangeSet(task.changeSet),
+        referenceGuid: task.parentGuid,
+        remoteHeadGuid: task.meta &&  task.meta.remoteHeadGuid,
+        localBranchStart: task.meta && task.meta.localBranchStart
+      };
+
+      this._cache.set(change.guid, _.cloneDeep(change));
+
       // Commit not already existing  This is where the fun begins
       if (ex.statusCode === HTTPStatus.NOT_FOUND) {
         let lastCommitGuid = await this._getLastCommitGuid(task.branchGuid);
@@ -384,23 +395,17 @@ class BranchWriteQueue {
         if (lastCommitGuid !== task.parentGuid && lastCommitGuid !== task.guid) {
           // Not on tip!
           if (task.rebase) {
-
-            // This is the first message in the history of the document.
+            // If rebase mode is active, we have to check, whether the parent commit exists
             try {
-              // If rebase mode is active, we have to check, whether the parent commit exists
               await this._commitManager.getCommit(task.parentGuid);
               logger.info('Found parent commit, rebasing');
 
-              const change = {
-                guid: task.guid,
-                changeSet: task.changeSet,
-                referenceGuid: task.parentGuid,
-                remoteHeadGuid: task.metadata.remoteHeadGuid,
-                localBranchStart: task.metadata.localBranchStart
-              };
-
-              this._cache.set(change.guid, _.cloneDeep(change));
-              rebaseToRemoteChanges(change, this.getUnrebasedChange.bind(this), this.getRebasedChanges.bind(this));
+              await rebaseToRemoteChanges(
+                change,
+                this.getUnrebasedChange.bind(this),
+                this.getRebasedChanges.bind(this, lastCommitGuid),
+                true
+              );
 
               task.parentGuid = lastCommitGuid;
 
@@ -452,9 +457,9 @@ class BranchWriteQueue {
     return this._cache.get(guid);
   }
 
-  async getRebasedChanges(startGuid, endGuid) {
+  async getRebasedChanges(lastCommitGuid, startGuid, endGuid) {
     const remoteChanges = [];
-    let currentCommitGUID = endGuid;
+    let currentCommitGUID = endGuid || lastCommitGuid;
 
     while (currentCommitGUID != startGuid) {
       let commit = await this._commitManager.getCommit(currentCommitGUID);

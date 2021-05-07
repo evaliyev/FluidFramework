@@ -20,7 +20,7 @@ function loop(promise, fn, makePromise) {
 }
 
 function rebaseToRemoteChanges(change, getUnrebasedChange, getRebasedChanges, isAsync = false) {
-  const makePromise = isAsync ? Promise.resolve : SyncPromise;
+  const makePromise = isAsync ? Promise.resolve.bind(Promise) : SyncPromise;
   let mainPromise = makePromise();
 
   const commitsOnOtherLocalBranch = {};
