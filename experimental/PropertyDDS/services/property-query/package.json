@@ -22,7 +22,7 @@
     "mocha:db": "mocha --opts test/db/mocha.opts",
     "mocha:endtoend": "mocha --opts test/endtoend/mocha.opts",
     "test": "npm run test:mocha",
-    "test:mocha": "mocha --exit -r @fluidframework/mocha-test-setup --unhandled-rejections=strict",
+    "test:mocha": "mocha --exit -r node_modules/@fluidframework/mocha-test-setup --unhandled-rejections=strict",
     "test:mocha:verbose": "cross-env FLUID_TEST_VERBOSE=1 npm run test:mocha"
   },
   "nyc": {
@@ -66,6 +66,12 @@
   },
   "devDependencies": {
     "@fluidframework/mocha-test-setup": "^0.40.0",
+    "@fluidframework/runtime-utils": "^0.40.0",
+    "@fluidframework/server-local-server": "^0.1025.0-0",
+    "@fluidframework/local-driver": "^0.40.0",
+    "@fluidframework/test-utils": "^0.40.0",
+    "@fluidframework/common-utils": "^0.30.0-0",
+    "@fluid-experimental/property-dds": "^0.40.0",
     "aws-sdk": "2.547.0",
     "chai": "^4.2.0",
     "chai-as-promised": "7.1.1",
