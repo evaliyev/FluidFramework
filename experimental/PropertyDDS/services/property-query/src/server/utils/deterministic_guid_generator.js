@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Autodesk, Inc. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 const { hashCombine4xUint32, uint32x4ToGUID, guidToUint32x4 } = require('@fluid-experimental/property-common').GuidUtils;

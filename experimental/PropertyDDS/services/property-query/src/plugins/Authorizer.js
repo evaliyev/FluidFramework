@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Autodesk, Inc. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 // If we are not enforcing and were not passed a user, use this:
