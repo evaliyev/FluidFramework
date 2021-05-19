@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import * as crypto from "crypto";
+import {SHA1, enc} from "crypto-js";
 import {
     extractBoxcar,
     IContext,
@@ -92,11 +92,7 @@ export class MuseLambda implements IPartitionLambda {
     }
 
     private createDerivedGuid(referenceGuid: string, identifier: string) {
-        const hash = crypto.createHash("sha1");
-        hash.write(`${referenceGuid}:${identifier}`);
-        hash.end();
-
-        const hexHash = hash.digest("hex");
+        const hexHash = enc.Hex.stringify(SHA1(`${referenceGuid}:${identifier}`));
         return `
             ${hexHash.substr(0, 8)}-
             ${hexHash.substr(8, 4)}-
