@@ -288,11 +288,13 @@ export class LocalOrderer implements IOrderer {
                     this.serviceConfiguration);
             });
 
-        this.museLambda = new LocalLambdaController(
-            this.deltasKafka,
-            this.setup,
-            this.museContext,
-            async (_, context) => new MuseLambda(context));
+        if (this.serviceConfiguration.muse.enable) {
+            this.museLambda = new LocalLambdaController(
+                this.deltasKafka,
+                this.setup,
+                this.museContext,
+                async (_, context) => new MuseLambda(context));
+        }
     }
 
     private async startScribeLambda(setup: ILocalOrdererSetup, context: IContext) {
@@ -402,11 +404,6 @@ export class LocalOrderer implements IOrderer {
             this.scriptoriumLambda = undefined;
         }
 
-        if (this.museLambda) {
-            this.museLambda.close();
-            this.museLambda = undefined;
-        }
-
         if (this.foremanLambda) {
             this.foremanLambda.close();
             this.foremanLambda = undefined;
@@ -420,6 +417,11 @@ export class LocalOrderer implements IOrderer {
         if (this.broadcasterLambda) {
             this.broadcasterLambda.close();
             this.broadcasterLambda = undefined;
+        }
+
+        if (this.museLambda) {
+            this.museLambda.close();
+            this.museLambda = undefined;
         }
     }
 

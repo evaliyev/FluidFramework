@@ -3,7 +3,6 @@
  * Licensed under the MIT License.
  */
 
-import {SHA1, enc} from "crypto-js";
 import {
     extractBoxcar,
     IContext,
@@ -13,6 +12,7 @@ import {
     SequencedOperationType,
 } from "@fluidframework/server-services-core";
 
+import { SHA1, enc } from "crypto-js";
 import Axios from "axios";
 
 export class MuseLambda implements IPartitionLambda {
@@ -56,8 +56,6 @@ export class MuseLambda implements IPartitionLambda {
     public close() {
         this.pending.clear();
         this.current.clear();
-
-        return;
     }
 
     private sendPending() {
@@ -72,11 +70,11 @@ export class MuseLambda implements IPartitionLambda {
         this.pending = temp;
         const batchOffset = this.pendingOffset;
 
-        const allProcessed: Promise<void>[] = [];
+        const allProcessed: Promise<void[]>[] = [];
 
         // Process all the batches + checkpoint
         for (const [, messages] of this.current) {
-            const processP = this.processMHCore(messages);
+            const processP = this.processMuseCoreParallel(messages);
             allProcessed.push(processP);
         }
 
@@ -101,61 +99,92 @@ export class MuseLambda implements IPartitionLambda {
             ${hexHash.substr(20, 12)}`;
     }
 
-    private async processMHCore(messages: ISequencedOperationMessage[]): Promise<void> {
+    private async processMuseCoreParallel(messages: ISequencedOperationMessage[]) {
+        const processedMessages: Map<string, Promise<void>> = new Map();
+
         for (const message of messages) {
             if (message?.operation?.type === "op") {
                 const contents = JSON.parse(message.operation.contents);
                 const opData = contents.contents?.contents?.content?.contents;
                 if (opData && opData.op === 0 && opData.changeSet !== undefined) {
-                    const branchGuid = contents.contents.contents.content.address;
-                    const commitGuid = opData.guid;
+                    // At this point is checked to be submitted to Muse
+                    const branchGuid: string = contents.contents.contents.content.address;
 
-                    this.context.log?.info(
-                        `MH Commit: branch: ${branchGuid},
-                            commit ${commitGuid},
-                            changeSet:  ${JSON.stringify(opData.changeSet, undefined, 2)}`,
-                    );
-
-                    let parentCommitGuid = opData.referenceGuid;
-                    // Create a branch for the first commit that does not yet reference any other commit
-                    if (opData.referenceGuid === "") {
-                        const rootGuid = this.createDerivedGuid(branchGuid, "root");
-                        const branchCreationResponse = await Axios.post("http://127.0.0.1:3070/branch", {
-                            guid: branchGuid,
-                            rootCommitGuid: rootGuid,
-                            meta: {},
-                            created: 0,
-                        });
-                        parentCommitGuid = rootGuid;
-                        if (branchCreationResponse.status === 200) {
-                            this.context.log?.info("Branch sucessfully created");
-                        } else {
-                            this.context.log?.error("Branch cration failed");
-                        }
-                    }
-
-                    // Add the commit
-                    const commitCreationResponse =
-                        await Axios.post(`http://127.0.0.1:3070/branch/${branchGuid}/commit`, {
-                            guid: commitGuid,
+                    const currentProcessing = processedMessages.get(branchGuid);
+                    if (currentProcessing) {
+                        processedMessages.set(
                             branchGuid,
-                            parentGuid: parentCommitGuid,
-                            changeSet: JSON.stringify(opData.changeSet),
-                            meta: {
-                                remoteHeadGuid: opData.remoteHeadGuid,
-                                localBranchStart: opData.localBranchStart,
-                                sequenceNumber: message.operation.sequenceNumber,
-                                minimumSequenceNumber: message.operation.minimumSequenceNumber,
-                            },
-                            rebase: true,
-                        });
-                    if (commitCreationResponse.status === 200) {
-                        this.context.log?.info("Commit sucessfully created");
+                            currentProcessing.then(async () => this.processMuseCore(branchGuid, opData, message)),
+                        );
                     } else {
-                        this.context.log?.error("Commit cration failed");
+                        processedMessages.set(branchGuid, Promise.resolve());
                     }
                 }
             }
+        }
+        return Promise.all(processedMessages.values());
+    }
+
+    private async processMuseCore(branchGuid: string, opData: any, message: ISequencedOperationMessage): Promise<void> {
+        const commitGuid = opData.guid;
+
+        this.context.log?.info(
+            `MH Commit: branch: ${branchGuid},
+             commit ${commitGuid},
+             changeSet:  ${JSON.stringify(opData.changeSet, undefined, 2)}`,
+        );
+
+        let parentCommitGuid = opData.referenceGuid;
+        // Create a branch for the first commit that does not yet reference any other commit
+        if (opData.referenceGuid === "") {
+            parentCommitGuid = await this.createBranch(branchGuid);
+        }
+
+        await this.createCommit(commitGuid, parentCommitGuid, branchGuid, opData, message);
+    }
+
+    private async createBranch(branchGuid: string): Promise<string> {
+        const rootCommitGuid = this.createDerivedGuid(branchGuid, "root");
+        const branchCreationResponse = await Axios.post("http://127.0.0.1:3070/branch", {
+            guid: branchGuid,
+            rootCommitGuid,
+            meta: {},
+            created: 0,
+        });
+
+        if (branchCreationResponse.status === 200) {
+            this.context.log?.info("Branch successfully created");
+        } else {
+            this.context.log?.error("Branch creation failed");
+        }
+        return rootCommitGuid;
+    }
+
+    private async createCommit(
+        commitGuid: string,
+        parentGuid: string,
+        branchGuid: string,
+        opData: any,
+        message: ISequencedOperationMessage,
+    ) {
+        const commitCreationResponse =
+            await Axios.post(`http://127.0.0.1:3070/branch/${branchGuid}/commit`, {
+                guid: commitGuid,
+                branchGuid,
+                parentGuid,
+                changeSet: JSON.stringify(opData.changeSet),
+                meta: {
+                    remoteHeadGuid: opData.remoteHeadGuid,
+                    localBranchStart: opData.localBranchStart,
+                    sequenceNumber: message.operation.sequenceNumber,
+                    minimumSequenceNumber: message.operation.minimumSequenceNumber,
+                },
+                rebase: true,
+            });
+        if (commitCreationResponse.status === 200) {
+            this.context.log?.info("Commit successfully created");
+        } else {
+            this.context.log?.error("Commit creation failed");
         }
     }
 }

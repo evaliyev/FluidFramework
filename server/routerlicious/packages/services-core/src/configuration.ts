@@ -73,6 +73,12 @@ export interface IDocumentLambdaServerConfiguration {
     partitionActivityCheckInterval: number;
 }
 
+// Muse lambda configuration
+export interface IMuseServerConfiguration {
+    // Enables Muse submission lambda
+    enable: boolean;
+}
+
 /**
  * Key value store of service configuration properties
  */
@@ -89,6 +95,9 @@ export interface IServerConfiguration {
 
     // Scribe lambda configuration
     scribe: IScribeServerConfiguration;
+
+    // Muse lambda configuration
+    muse: IMuseServerConfiguration;
 
     // Document lambda configuration
     documentLambda: IDocumentLambdaServerConfiguration;
@@ -133,6 +142,9 @@ export const DefaultServiceConfiguration: IServiceConfiguration = {
                 message: "Submit a summary before inserting additional operations",
             },
         },
+    },
+    muse: {
+        enable: false,
     },
     documentLambda: {
         partitionActivityTimeout: 10 * 60 * 1000,
