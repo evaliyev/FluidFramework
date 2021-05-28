@@ -73,9 +73,9 @@ export interface IDocumentLambdaServerConfiguration {
     partitionActivityCheckInterval: number;
 }
 
-// Muse lambda configuration
-export interface IMuseServerConfiguration {
-    // Enables Muse submission lambda
+// Moira lambda configuration
+export interface IMoiraServerConfiguration {
+    // Enables Moira submission lambda
     enable: boolean;
 }
 
@@ -96,8 +96,8 @@ export interface IServerConfiguration {
     // Scribe lambda configuration
     scribe: IScribeServerConfiguration;
 
-    // Muse lambda configuration
-    muse: IMuseServerConfiguration;
+    // Moira lambda configuration
+    moira: IMoiraServerConfiguration;
 
     // Document lambda configuration
     documentLambda: IDocumentLambdaServerConfiguration;
@@ -143,7 +143,7 @@ export const DefaultServiceConfiguration: IServiceConfiguration = {
             },
         },
     },
-    muse: {
+    moira: {
         enable: false,
     },
     documentLambda: {

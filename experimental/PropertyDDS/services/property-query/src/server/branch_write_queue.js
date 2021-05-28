@@ -454,6 +454,9 @@ class BranchWriteQueue {
   }
 
   async getUnrebasedChange(guid) {
+    // TODO: As a first version, we can rely on a cache here, but for this
+    // service to be reliable (e.g. after a restart or load shedding), we
+    // need to have a mechanism to fetch the missing commits from the database.
     return this._cache.get(guid);
   }
 
@@ -461,6 +464,11 @@ class BranchWriteQueue {
     const remoteChanges = [];
     let currentCommitGUID = endGuid || lastCommitGuid;
 
+    // TODO: Warning!  this is rather slow, as we linearly traverse the commit chain.
+    // Currently the MaterializedHistory does not have an index to retrieve a commit range
+    //  Maybe we should add such an index?
+    //  On the other hand, maybe a cache is sufficient,
+    // since we usually should only need a few commits prior to the tip.
     while (currentCommitGUID != startGuid) {
       let commit = await this._commitManager.getCommit(currentCommitGUID);
       let changeSet = await this._commitManager.getCommitCS({ guid: currentCommitGUID });

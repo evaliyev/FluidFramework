@@ -15,7 +15,7 @@ import {
 import { SHA1, enc } from "crypto-js";
 import Axios from "axios";
 
-export class MuseLambda implements IPartitionLambda {
+export class MoiraLambda implements IPartitionLambda {
     private pending = new Map<string, ISequencedOperationMessage[]>();
     private pendingOffset: IQueuedMessage | undefined;
     private current = new Map<string, ISequencedOperationMessage[]>();
@@ -74,7 +74,7 @@ export class MuseLambda implements IPartitionLambda {
 
         // Process all the batches + checkpoint
         for (const [, messages] of this.current) {
-            const processP = this.processMuseCoreParallel(messages);
+            const processP = this.processMoiraCoreParallel(messages);
             allProcessed.push(processP);
         }
 
@@ -99,7 +99,7 @@ export class MuseLambda implements IPartitionLambda {
             ${hexHash.substr(20, 12)}`;
     }
 
-    private async processMuseCoreParallel(messages: ISequencedOperationMessage[]) {
+    private async processMoiraCoreParallel(messages: ISequencedOperationMessage[]) {
         const processedMessages: Map<string, Promise<void>> = new Map();
 
         for (const message of messages) {
@@ -107,17 +107,17 @@ export class MuseLambda implements IPartitionLambda {
                 const contents = JSON.parse(message.operation.contents);
                 const opData = contents.contents?.contents?.content?.contents;
                 if (opData && opData.op === 0 && opData.changeSet !== undefined) {
-                    // At this point is checked to be submitted to Muse
+                    // At this point is checked to be submitted to Moira
                     const branchGuid: string = contents.contents.contents.content.address;
 
                     const currentProcessing = processedMessages.get(branchGuid);
                     if (currentProcessing) {
                         processedMessages.set(
                             branchGuid,
-                            currentProcessing.then(async () => this.processMuseCore(branchGuid, opData, message)),
+                            currentProcessing.then(async () => this.processMoiraCore(branchGuid, opData, message)),
                         );
                     } else {
-                        processedMessages.set(branchGuid, Promise.resolve());
+                        processedMessages.set(branchGuid, this.processMoiraCore(branchGuid, opData, message));
                     }
                 }
             }
@@ -125,7 +125,11 @@ export class MuseLambda implements IPartitionLambda {
         return Promise.all(processedMessages.values());
     }
 
-    private async processMuseCore(branchGuid: string, opData: any, message: ISequencedOperationMessage): Promise<void> {
+    private async processMoiraCore(
+        branchGuid: string,
+        opData: any,
+        message: ISequencedOperationMessage,
+    ): Promise<void> {
         const commitGuid = opData.guid;
 
         this.context.log?.info(

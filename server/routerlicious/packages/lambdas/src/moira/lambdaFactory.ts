@@ -11,9 +11,9 @@ import {
     IPartitionLambdaFactory,
     MongoManager,
 } from "@fluidframework/server-services-core";
-import { MuseLambda } from "./lambda";
+import { MoiraLambda } from "./lambda";
 
-export class MHTestLambdaFactory extends EventEmitter implements IPartitionLambdaFactory {
+export class MoiraLambdaFactory extends EventEmitter implements IPartitionLambdaFactory {
     constructor(
         private readonly mongoManager: MongoManager) /* ,
         private readonly opCollection: ICollection<any> ) */ {
@@ -23,7 +23,7 @@ export class MHTestLambdaFactory extends EventEmitter implements IPartitionLambd
     public async create(config: IPartitionLambdaConfig, context: IContext): Promise<IPartitionLambda> {
         // Takes in the io as well as the collection. I can probably keep the same lambda but only ever give it stuff
         // from a single document
-        return new MuseLambda(context);
+        return new MoiraLambda(context);
     }
 
     public async dispose(): Promise<void> {
