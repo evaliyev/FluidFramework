@@ -2,7 +2,7 @@
  * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
-(function() {
+
   const path = require('path');
   const ModuleLogger = require('./server/utils/module_logger');
   const PluginManager = require('./src/plugins/PluginManager');
@@ -66,4 +66,3 @@
   });
 
   module.exports = promise;
-})();

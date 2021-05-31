@@ -44,7 +44,6 @@
     "async": "^3.2.0",
     "basicauth-middleware": "2.0.0",
     "body-parser": "^1.18.3",
-    "bson-ext": "2.0.5",
     "chalk": "2.4.1",
     "cls-hooked": "4.2.2",
     "cuint": "0.2.2",
