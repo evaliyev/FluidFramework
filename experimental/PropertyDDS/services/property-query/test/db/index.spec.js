@@ -4,9 +4,7 @@
  */
 /* eslint no-unused-expressions: 0 */
 const { generateGUID } = require('@fluid-experimental/property-common').GuidUtils;
-const { Int64 } = require('int64-napi');
-const Uint64 = require('cuint').UINT64;
-
+const Long = require("long");
 const createMhs = require('../utils/create_mhs');
 
 describe('Index db tests', () => {
@@ -264,8 +262,8 @@ describe('Index db tests', () => {
           createSingleColumnIndexMV([
             ['50', 'people[00000000-0000-0000-0000-000000000001]'],
             ['30', 'people[00000000-0000-0000-0000-000000000002]'],
-            [new Int64(0xFFFFFFFF, 0xFFFFFFFF).toString(), 'extraterrestrials[00000000-0000-0000-0000-000000000011]'],
-            [new Uint64(0xFFFFFFFF, 0xFFFFFFFF).toString(), 'planets[00000000-0000-0000-0000-000000000021]']
+            [new Long(0xFFFFFFFF, 0xFFFFFFFF).toString(), 'extraterrestrials[00000000-0000-0000-0000-000000000011]'],
+            [new Long(0xFFFFFFFF, 0xFFFFFFFF, true).toString(), 'planets[00000000-0000-0000-0000-000000000021]']
           ]),
           createSingleColumnIndexMV([
             ['false', 'people[00000000-0000-0000-0000-000000000001]'],

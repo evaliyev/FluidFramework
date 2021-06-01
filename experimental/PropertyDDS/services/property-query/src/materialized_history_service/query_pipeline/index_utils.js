@@ -3,9 +3,8 @@
  * Licensed under the MIT License.
  */
 const _ = require('lodash');
-const { Int64 } = require('int64-napi');
-const Uint64 = require('cuint').UINT64;
-const OperationError = require('@fluid-experimental/property-common').OperationError;
+const Long = require('long');
+const { OperationError } = require('@fluid-experimental/property-common');
 const HTTPStatus = require('http-status');
 const PathHelper = require('@fluid-experimental/property-changeset').PathHelper;
 const IndexKeyEncoder = require('../../server/utils/index_key_encoder');
@@ -21,18 +20,10 @@ denormalizers[IndexKeyEncoder.Type.Integer] = (value) => {
     // This is a safe integer in JS
     return intValue;
   }
-  // This can be either an Int64 or Uint64
-  if (value.startsWith('-')) {
-    // This must mean it is an Int64
-    const { low, high } = new Int64(value).getIntValues();
-    return [low, high, true];
-  } else {
-    // This can be either an Int64 or Uint64. We choose Uint64 as it can fit both
-    const uint64 = new Uint64(value);
-    const high = (uint64._a48 << 16) | uint64._a32;
-    const low = (uint64._a16 << 16) | uint64._a00;
-    return [low, high, false];
-  }
+
+  const signed = value.startsWith('-');
+  const long = Long.fromString(value, !signed);
+  return [long.getLowBits(), long.getHighBits(), signed];
 };
 denormalizers[IndexKeyEncoder.Type.Boolean] = (value) => value === 'true';
 denormalizers[IndexKeyEncoder.Type.Single] = (value) => parseFloat(value);
@@ -295,9 +286,9 @@ class IndexUtils {
       return IndexUtils.UNDEFINED_KEY;
     }
     if (typeid === 'Uint64') {
-      return new Uint64(value[0], value[1]).toString();
+      return new Long(value[0], value[1], true).toString();
     } else if (typeid === 'Int64') {
-      return new Int64(value[0], value[1]).toString();
+      return new Long(value[0], value[1]).toString();
     } else {
       return value.toString();
     }

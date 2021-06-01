@@ -4,9 +4,8 @@
  */
 /* eslint max-nested-callbacks: [0, 0] */
 const InMemoryByValue = require('../../src/materialized_history_service/query_pipeline/filtering/in_memory_by_value');
-const OperationError = require('@fluid-experimental/property-common').OperationError;
-
-const Int64 = require('int64-napi').Int64;
+const { OperationError } = require('@fluid-experimental/property-common');
+const Long = require("long");
 
 describe('In Memory Filtering By Value', () => {
 
@@ -729,17 +728,17 @@ describe('In Memory Filtering By Value', () => {
 
   describe('with a path prefix, with Int64 values', () => {
     let intsX = [
-      new Int64(50).getIntValues(),
-      new Int64(40).getIntValues(),
-      new Int64(30).getIntValues(),
-      new Int64(20).getIntValues()
+      new Long(50),
+      new Long(40),
+      new Long(30),
+      new Long(20)
     ];
 
     let intsY = [
-      new Int64(10).getIntValues(),
-      new Int64(20).getIntValues(),
-      new Int64(30).getIntValues(),
-      new Int64(40).getIntValues()
+      new Long(10),
+      new Long(20),
+      new Long(30),
+      new Long(40)
     ];
 
     let changeSet = {
@@ -750,26 +749,26 @@ describe('In Memory Filtering By Value', () => {
               'mysample:point64-1.0.0': {
                 'pointA': {
                   Int64: {
-                    x: [intsX[0].low, intsX[0].high],
-                    y: [intsY[0].low, intsY[0].high]
+                    x: [intsX[0].getLowBits(), intsX[0].getHighBits()],
+                    y: [intsY[0].getLowBits(), intsY[0].getHighBits()]
                   }
                 },
                 'pointB': {
                   Int64: {
-                    x: [intsX[1].low, intsX[1].high],
-                    y: [intsY[1].low, intsY[1].high]
+                    x: [intsX[1].getLowBits(), intsX[1].getHighBits()],
+                    y: [intsY[1].getLowBits(), intsY[1].getHighBits()]
                   }
                 },
                 'pointC': {
                   Int64: {
-                    x: [intsX[2].low, intsX[2].high],
-                    y: [intsY[2].low, intsY[2].high]
+                    x: [intsX[2].getLowBits(), intsX[2].getHighBits()],
+                    y: [intsY[2].getLowBits(), intsY[2].getHighBits()]
                   }
                 },
                 'pointD': {
                   Int64: {
-                    x: [intsX[3].low, intsX[3].high],
-                    y: [intsY[3].low, intsY[3].high]
+                    x: [intsX[3].getLowBits(), intsX[3].getHighBits()],
+                    y: [intsY[3].getLowBits(), intsY[3].getHighBits()]
                   }
                 }
               }
@@ -788,7 +787,7 @@ describe('In Memory Filtering By Value', () => {
             depthLimit: 1,
             where: {
               'in': {
-                x: [[intsX[0].low, intsX[0].high], [intsX[2].low, intsX[2].high]]
+                x: [[intsX[0].getLowBits(), intsX[0].getHighBits()], [intsX[2].getLowBits(), intsX[2].getHighBits()]]
               }
             }
           }]
@@ -804,14 +803,14 @@ describe('In Memory Filtering By Value', () => {
                     'mysample:point64-1.0.0': {
                       'pointA': {
                         Int64: {
-                          x: [intsX[0].low, intsX[0].high],
-                          y: [intsY[0].low, intsY[0].high]
+                          x: [intsX[0].getLowBits(), intsX[0].getHighBits()],
+                          y: [intsY[0].getLowBits(), intsY[0].getHighBits()]
                         }
                       },
                       'pointC': {
                         Int64: {
-                          x: [intsX[2].low, intsX[2].high],
-                          y: [intsY[2].low, intsY[2].high]
+                          x: [intsX[2].getLowBits(), intsX[2].getHighBits()],
+                          y: [intsY[2].getLowBits(), intsY[2].getHighBits()]
                         }
                       }
                     }
@@ -860,10 +859,10 @@ describe('In Memory Filtering By Value', () => {
             depthLimit: 1,
             where: {
               lt: {
-                x: [intsX[1].low, intsX[1].high]
+                x: [intsX[1].getLowBits(), intsX[1].getHighBits()]
               },
               gt: {
-                y: [intsY[1].low, intsY[1].high]
+                y: [intsY[1].getLowBits(), intsY[1].getHighBits()]
               }
             }
           }]
@@ -879,14 +878,14 @@ describe('In Memory Filtering By Value', () => {
                     'mysample:point64-1.0.0': {
                       'pointC': {
                         Int64: {
-                          x: [intsX[2].low, intsX[2].high],
-                          y: [intsY[2].low, intsY[2].high]
+                          x: [intsX[2].getLowBits(), intsX[2].getHighBits()],
+                          y: [intsY[2].getLowBits(), intsY[2].getHighBits()]
                         }
                       },
                       'pointD': {
                         Int64: {
-                          x: [intsX[3].low, intsX[3].high],
-                          y: [intsY[3].low, intsY[3].high]
+                          x: [intsX[3].getLowBits(), intsX[3].getHighBits()],
+                          y: [intsY[3].getLowBits(), intsY[3].getHighBits()]
                         }
                       }
                     }

@@ -2,8 +2,7 @@
  * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
-const Uint64 = require('cuint').UINT64;
-const Int64 = require('int64-napi').Int64;
+const Long = require("long");
 const { convertPathToChunkBoundaryFormat } = require('../change_set_processing/chunk_change_set');
 
 /**
@@ -44,18 +43,9 @@ class Int64Comparator extends Comparator {
    * @return {Number} - Comparison result for sorting
    */
   _compare(aValue, bValue) {
-    const aInt = new Int64(aValue[0], aValue[1]);
-    const bInt = new Int64(bValue[0], bValue[1]);
-
-    if (aInt.eq(bInt)) {
-      return 0;
-    } else {
-      if (aInt.gt(bInt)) {
-        return 1;
-      } else {
-        return -1;
-      }
-    }
+    const aInt = new Long(aValue[0], aValue[1]);
+    const bInt = new Long(bValue[0], bValue[1]);
+    return aInt.compare(bInt);
   }
 }
 
@@ -70,18 +60,9 @@ class UInt64Comparator extends Comparator {
    * @return {Number} - Comparison result for sorting
    */
   _compare(aValue, bValue) {
-    const aUInt = new Uint64(aValue[0], aValue[1]);
-    const bUInt = new Uint64(bValue[0], bValue[1]);
-
-    if (aUInt.equals(bUInt)) {
-      return 0;
-    } else {
-      if (aUInt.greaterThan(bUInt)) {
-        return 1;
-      } else {
-        return -1;
-      }
-    }
+    const aUInt = new Long(aValue[0], aValue[1], true);
+    const bUInt = new Long(bValue[0], bValue[1], true);
+    return aUInt.compare(bUInt);
   }
 }
 

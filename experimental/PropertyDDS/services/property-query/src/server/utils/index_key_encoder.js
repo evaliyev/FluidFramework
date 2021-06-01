@@ -3,8 +3,7 @@
  * Licensed under the MIT License.
  */
 const _ = require('lodash');
-const { Int64 } = require('int64-napi');
-const Uint64 = require('cuint').UINT64;
+const Long = require('long');
 const { PathHelper } = require('@fluid-experimental/property-changeset');
 const { OperationError } = require('@fluid-experimental/property-common');
 const HttpStatus = require('http-status');
@@ -228,14 +227,15 @@ class IndexKeyEncoder {
       let byteLength;
       let isNegative = false;
       if (isSigned) {
-        const int64 = new Int64(low, high);
-        if (int64.lt(0)) {
-          int64.negative();
-          ({ low, high } = int64.getIntValues());
+        let int64 = new Long(low, high);
+        if (int64.lessThan(0)) {
+          int64 = int64.negate();
+          low = int64.getLowBits();
+          high = int64.getHighBits()
           // At this point low might be negative (high should not)
           // Use the same bytes to get the equivalent positive
           if (low < 0) {
-            low = new Uint64(low, 0).toNumber();
+            low = new Long(low, 0, true).toNumber();
           }
           isNegative = true;
         }
@@ -420,9 +420,9 @@ class IndexKeyEncoder {
       let low = this._bigEndianBytesToNumber(
         encodedValue.substring(startIndex + 1 + (hexLength - 8), startIndex + 1 + hexLength));
       if (codeDiff < 0) {
-        const int64 = new Int64(~low, ~high);
-        int64.negative();
-        ({ low, high } = int64.getIntValues());
+        const int64 = (new Long(~low, ~high)).negate();
+        low = int64.getLowBits();
+        high = int64.getHighBits();
         // Since we are doing the operations in reverse order, we need to stuff the missing bytes.
         let stuff = 0x00000000;
         for (let i = byteLength; i < 8; i++) {
@@ -433,10 +433,10 @@ class IndexKeyEncoder {
       }
       // Use the same bytes to get the equivalent positive
       if (low < 0) {
-        low = new Uint64(low, 0).toNumber();
+        low = new Long(low, 0, true).toNumber();
       }
       if (high < 0) {
-        high = new Uint64(high, 0).toNumber();
+        high = new Long(high, 0, true).toNumber();
       }
       return { value: [low, high, !(codeDiff === 8 && (high & 0x80000000))], endIndex: startIndex + hexLength };
     }
