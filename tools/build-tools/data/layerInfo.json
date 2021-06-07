@@ -270,6 +270,14 @@
                 "deps": [
                     "Server-Libs"
                 ]
+            },
+            "Server-Moira": {
+                "dirs": [
+                    "experimental/PropertyDDS/services"
+                ],
+                "deps": [
+                    "Framework"
+                ]
             }
         }
     },
