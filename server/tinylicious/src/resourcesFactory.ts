@@ -13,7 +13,7 @@ import * as git from "isomorphic-git";
 import { Provider } from "nconf";
 import socketIo from "socket.io";
 
-import winston from "winston";
+import {winston} from "@fluidframework/server-services-utils"
 import { TinyliciousResources } from "./resources";
 import {
     DbFactory,
@@ -61,7 +61,11 @@ export class TinyliciousResourcesFactory implements IResourcesFactory<Tinyliciou
                 return new Historian(url, false, false);
             },
             winston,
-            undefined /* serviceConfiguration */,
+            {
+                moira: {
+                    enable: config.get("moira:enable") || false
+                }
+            } /* serviceConfiguration */,
             pubsub);
 
         return new TinyliciousResources(
