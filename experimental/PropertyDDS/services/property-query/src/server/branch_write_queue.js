@@ -10,6 +10,8 @@ const OperationError = require('@fluid-experimental/property-common').OperationE
 const logger = ModuleLogger.getLogger('MaterializedHistoryService.BranchWriteQueue');
 const { ChangeSet, rebaseToRemoteChanges } = require('@fluid-experimental/property-changeset');
 const LRU = require('lru-cache');
+const { databaManager, databaseManager } = require('./../database/factory');
+
 
 const _ = require('lodash');
 
@@ -457,6 +459,7 @@ class BranchWriteQueue {
     // TODO: As a first version, we can rely on a cache here, but for this
     // service to be reliable (e.g. after a restart or load shedding), we
     // need to have a mechanism to fetch the missing commits from the database.
+    console.log(databaseManager);
     return this._cache.get(guid);
   }
 
