@@ -23,12 +23,12 @@ import {
     RootDataObject,
 } from "@fluidframework/fluid-static";
 
-import { AzureClientProps, AzureContainerServices } from "./interfaces";
-import { AzureAudience } from "./AzureAudience";
+import { ClientProps, ContainerServices } from "./interfaces";
+import { RouterliciousAudience } from "./RouterliciousAudience";
 import {
-    AzureUrlResolver,
-    createAzureCreateNewRequest,
-} from "./AzureUrlResolver";
+    RouterliciousUrlResolver,
+    createRouterliciousCreateNewRequest,
+} from "./RouterliciousUrlResolver";
 
 /**
  * Strongly typed id for connecting to a local Azure Fluid Relay.
@@ -39,7 +39,7 @@ export const LOCAL_MODE_TENANT_ID = "local";
  * AzureClient provides the ability to have a Fluid object backed by the Azure Fluid Relay or,
  * when running with local tenantId, have it be backed by a local Azure Fluid Relay instance.
  */
-export class AzureClient {
+export class RouterliciousClient {
     private readonly documentServiceFactory: IDocumentServiceFactory;
     private readonly urlResolver: IUrlResolver;
 
@@ -47,8 +47,8 @@ export class AzureClient {
      * Creates a new client instance using configuration parameters.
      * @param props - Properties for initializing a new AzureClient instance
      */
-    constructor(private readonly props: AzureClientProps) {
-        this.urlResolver = new AzureUrlResolver();
+    constructor(private readonly props: ClientProps) {
+        this.urlResolver = new RouterliciousUrlResolver(this.props.connection);
         // The local service implementation differs from the Azure Fluid Relay in blob
         // storage format. Azure Fluid Relay supports whole summary upload. Local currently does not.
         const enableWholeSummaryUpload =
@@ -68,7 +68,7 @@ export class AzureClient {
         containerSchema: ContainerSchema,
     ): Promise<{
         container: IFluidContainer;
-        services: AzureContainerServices;
+        services: ContainerServices;
     }> {
         const loader = this.createLoader(containerSchema);
 
@@ -81,7 +81,7 @@ export class AzureClient {
             container,
             "/",
         );
-        const createNewRequest = createAzureCreateNewRequest(
+        const createNewRequest = createRouterliciousCreateNewRequest(
             this.props.connection.orderer,
             this.props.connection.storage,
             this.props.connection.tenantId,
@@ -115,14 +115,16 @@ export class AzureClient {
         containerSchema: ContainerSchema,
     ): Promise<{
         container: IFluidContainer;
-        services: AzureContainerServices;
+        services: ContainerServices;
     }> {
         const loader = this.createLoader(containerSchema);
-        const url = new URL(this.props.connection.orderer);
-        url.searchParams.append("storage", encodeURIComponent(this.props.connection.storage));
-        url.searchParams.append("tenantId", encodeURIComponent(this.props.connection.tenantId));
-        url.searchParams.append("containerId", encodeURIComponent(id));
-        const container = await loader.resolve({ url: url.href });
+
+        // const url = new URL(this.props.connection.orderer);
+        // url.searchParams.append("storage", encodeURIComponent(this.props.connection.storage));
+        // url.searchParams.append("tenantId", encodeURIComponent(this.props.connection.tenantId));
+        // url.searchParams.append("containerId", encodeURIComponent(id));
+
+        const container = await loader.resolve({ url: id });
         const rootDataObject = await requestFluidObject<RootDataObject>(
             container,
             "/",
@@ -132,9 +134,9 @@ export class AzureClient {
         return { container: fluidContainer, services };
     }
 
-    private getContainerServices(container: IContainer): AzureContainerServices {
+    private getContainerServices(container: IContainer): ContainerServices {
         return {
-            audience: new AzureAudience(container),
+            audience: new RouterliciousAudience(container),
         };
     }
 

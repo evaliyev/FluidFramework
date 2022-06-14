@@ -10,18 +10,19 @@ import {
     IResolvedUrl,
     IUrlResolver,
 } from "@fluidframework/driver-definitions";
+import { ConnectionConfig } from "./interfaces";
 
-// Implementation of a URL resolver to resolve documents stored using the Azure Fluid Relay
+// Implementation of a URL resolver to resolve documents stored using Routerlicious
 // based off of the orderer and storage URLs provide. The token provider here can be a
 // InsecureTokenProvider for basic scenarios or more robust, secure providers that fulfill the
 // ITokenProvider interface
-export class AzureUrlResolver implements IUrlResolver {
-    constructor() {}
+export class RouterliciousUrlResolver implements IUrlResolver {
+    constructor(protected props: ConnectionConfig) {
+    }
 
     public async resolve(request: IRequest): Promise<IFluidResolvedUrl> {
-        const { ordererUrl, storageUrl, tenantId, containerId } = decodeAzureUrl(
-            request.url,
-        );
+        const containerId = request.url.split("/")[0];
+        const { orderer: ordererUrl, storage: storageUrl, tenantId } = this.props;
         // determine whether the request is for creating of a new container.
         // such request has the `createNew` header set to true and doesn't have a container ID.
         if (
@@ -43,7 +44,7 @@ export class AzureUrlResolver implements IUrlResolver {
             };
         }
         if (containerId === undefined) {
-            throw new Error("Azure URL did not contain containerId");
+            throw new Error("Routerlicious URL did not contain containerId");
         }
         const documentUrl = `${ordererUrl}/${tenantId}/${containerId}`;
         return Promise.resolve({
@@ -59,10 +60,7 @@ export class AzureUrlResolver implements IUrlResolver {
         });
     }
 
-    public async getAbsoluteUrl(
-        resolvedUrl: IResolvedUrl,
-        relativeUrl: string,
-    ): Promise<string> {
+    public async getAbsoluteUrl(resolvedUrl: IResolvedUrl, relativeUrl: string): Promise<string> {
         if (resolvedUrl.type !== "fluid") {
             throw Error("Invalid Resolved Url");
         }
@@ -70,36 +68,7 @@ export class AzureUrlResolver implements IUrlResolver {
     }
 }
 
-function decodeAzureUrl(urlString: string): {
-    ordererUrl: string;
-    storageUrl: string;
-    tenantId: string;
-    containerId?: string;
-} {
-    const url = new URL(urlString);
-    const ordererUrl = url.origin;
-    const searchParams = url.searchParams;
-    const storageUrl = searchParams.get("storage");
-    if (storageUrl === null) {
-        throw new Error("Azure URL did not contain a storage URL");
-    }
-    const tenantId = searchParams.get("tenantId");
-    if (tenantId === null) {
-        throw new Error("Azure URL did not contain a tenant ID");
-    }
-    const storageUrlDecoded = decodeURIComponent(storageUrl);
-    const tenantIdDecoded = decodeURIComponent(tenantId);
-    const containerId = searchParams.get("containerId");
-    const containerIdDecoded = containerId !== null ? decodeURIComponent(containerId) : undefined;
-    return {
-        ordererUrl,
-        storageUrl: storageUrlDecoded,
-        tenantId: tenantIdDecoded,
-        containerId: containerIdDecoded,
-    };
-}
-
-export const createAzureCreateNewRequest = (
+export const createRouterliciousCreateNewRequest = (
     ordererUrl: string,
     storageUrl: string,
     tenantId: string,

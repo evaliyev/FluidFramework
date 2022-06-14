@@ -6,8 +6,8 @@ import { strict as assert } from "assert";
 import { AttachState } from "@fluidframework/container-definitions";
 import { ContainerSchema } from "@fluidframework/fluid-static";
 import { ISharedMap, IValueChanged, SharedMap } from "@fluidframework/map";
-import { AzureClient } from "../AzureClient";
-import { createAzureClient } from "./AzureClientFactory";
+import { RouterliciousClient } from "../RouterliciousClient";
+import { createAzureClient } from "./RouterliciousClientFactory";
 import { TestDataObject } from "./TestDataObject";
 
 const mapWait = async <T = any>(map: ISharedMap, key: string): Promise<T> => {
@@ -32,7 +32,7 @@ const mapWait = async <T = any>(map: ISharedMap, key: string): Promise<T> => {
 };
 
 describe("AzureClient", () => {
-    let client: AzureClient;
+    let client: RouterliciousClient;
     let schema: ContainerSchema;
 
     beforeEach(() => {

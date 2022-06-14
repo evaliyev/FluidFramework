@@ -9,9 +9,9 @@
  * @packageDocumentation
  */
 
-export * from "./AzureAudience";
-export * from "./AzureClient";
-export * from "./AzureFunctionTokenProvider";
+export * from "./RouterliciousAudience";
+export * from "./RouterliciousClient";
+export * from "./RouterliciousFunctionTokenProvider";
 export * from "./interfaces";
 
 export { ITokenProvider, ITokenResponse } from "@fluidframework/routerlicious-driver";

@@ -5,13 +5,13 @@
 
 import { ServiceAudience } from "@fluidframework/fluid-static";
 import { IClient } from "@fluidframework/protocol-definitions";
-import { IAzureAudience, AzureMember } from "./interfaces";
+import { IRouterliciousAudience, RouterliciousMember } from "./interfaces";
 
-export class AzureAudience extends ServiceAudience<AzureMember> implements IAzureAudience {
+export class RouterliciousAudience extends ServiceAudience<RouterliciousMember> implements IRouterliciousAudience {
   /**
    * @internal
    */
-  protected createServiceMember(audienceMember: IClient): AzureMember {
+  protected createServiceMember(audienceMember: IClient): RouterliciousMember {
     return {
       userId: audienceMember.user.id,
       userName: (audienceMember.user as any).name,

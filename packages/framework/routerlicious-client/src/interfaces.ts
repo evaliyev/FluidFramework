@@ -19,11 +19,11 @@ export {
 /**
  * Props for initializing a new AzureClient instance
  */
-export interface AzureClientProps {
+export interface ClientProps {
     /**
      * Configuration for establishing a connection with the Azure Fluid Relay.
      */
-    readonly connection: AzureConnectionConfig;
+    readonly connection: ConnectionConfig;
     /**
      * Optional. A logger instance to receive diagnostic messages.
      */
@@ -33,7 +33,7 @@ export interface AzureClientProps {
 /**
  * Parameters for establishing a connection with the Azure Fluid Relay.
  */
-export interface AzureConnectionConfig {
+export interface ConnectionConfig {
     /**
      * URI to the Azure Fluid Relay orderer endpoint
      */
@@ -59,19 +59,19 @@ export interface AzureConnectionConfig {
  * how the data is handled within the FluidContainer itself, i.e. which data objects or DDSes to use,
  * will not be included here but rather on the FluidContainer class itself.
  */
-export interface AzureContainerServices {
+export interface ContainerServices {
     /**
      * Provides an object that can be used to get the users that are present in this Fluid session and
      * listeners for when the roster has any changes from users joining/leaving the session
      */
-    audience: IAzureAudience;
+    audience: IRouterliciousAudience;
 }
 
 /**
  * Since Azure provides user names for all of its members, we extend the IMember interface to include
  * this service-specific value. It will be returned for all audience members connected to Azure.
  */
-export interface AzureMember<T = any> extends IMember {
+export interface RouterliciousMember<T = any> extends IMember {
     userName: string;
     additionalDetails?: T;
 }
@@ -79,4 +79,4 @@ export interface AzureMember<T = any> extends IMember {
 /**
  * Audience object for Azure Fluid Relay containers
  */
-export type IAzureAudience = IServiceAudience<AzureMember>;
+export type IRouterliciousAudience = IServiceAudience<RouterliciousMember>;
