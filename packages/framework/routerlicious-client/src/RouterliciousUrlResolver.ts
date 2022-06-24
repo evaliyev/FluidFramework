@@ -68,18 +68,12 @@ export class RouterliciousUrlResolver implements IUrlResolver {
     }
 }
 
-export const createRouterliciousCreateNewRequest = (
-    ordererUrl: string,
-    storageUrl: string,
-    tenantId: string,
-): IRequest => {
-    const url = new URL(ordererUrl);
-    url.searchParams.append("storage", encodeURIComponent(storageUrl));
-    url.searchParams.append("tenantId", encodeURIComponent(tenantId));
-    return {
-        url: url.href,
-        headers: {
-            [DriverHeader.createNew]: true,
-        },
-    };
-};
+export const createRouterliciousCreateNewRequest =
+    (documentId?: string): IRequest => (
+        {
+            url: documentId ?? "",
+            headers: {
+                [DriverHeader.createNew]: true,
+            },
+        }
+    );

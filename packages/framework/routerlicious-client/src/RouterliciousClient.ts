@@ -81,11 +81,7 @@ export class RouterliciousClient {
             container,
             "/",
         );
-        const createNewRequest = createRouterliciousCreateNewRequest(
-            this.props.connection.orderer,
-            this.props.connection.storage,
-            this.props.connection.tenantId,
-        );
+        const createNewRequest = createRouterliciousCreateNewRequest();
         const fluidContainer = new (class extends FluidContainer {
             async attach() {
                 if (this.attachState !== AttachState.Detached) {

@@ -7,7 +7,7 @@ import { AttachState } from "@fluidframework/container-definitions";
 import { ContainerSchema } from "@fluidframework/fluid-static";
 import { ISharedMap, IValueChanged, SharedMap } from "@fluidframework/map";
 import { RouterliciousClient } from "../RouterliciousClient";
-import { createAzureClient } from "./RouterliciousClientFactory";
+import { createRouterliciousClient } from "./RouterliciousClientFactory";
 import { TestDataObject } from "./TestDataObject";
 
 const mapWait = async <T = any>(map: ISharedMap, key: string): Promise<T> => {
@@ -31,12 +31,12 @@ const mapWait = async <T = any>(map: ISharedMap, key: string): Promise<T> => {
     });
 };
 
-describe("AzureClient", () => {
+describe("RouterliciousClient", () => {
     let client: RouterliciousClient;
     let schema: ContainerSchema;
 
     beforeEach(() => {
-        client = createAzureClient();
+        client = createRouterliciousClient();
         schema = {
             initialObjects: {
                 map1: SharedMap,
@@ -51,7 +51,7 @@ describe("AzureClient", () => {
      * Expected behavior: an error should not be thrown nor should a rejected promise
      * be returned.
      */
-    it("can create new Azure Fluid Relay container successfully", async () => {
+    it("can create new Routerlicious container successfully", async () => {
         const resourcesP = client.createContainer(schema);
 
         await assert.doesNotReject(
